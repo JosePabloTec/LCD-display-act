@@ -11,9 +11,9 @@
 #pragma config USBDIV = 1       // USB Clock Selection bit (used in Full-Speed USB mode only; UCFG:FSEN = 1) (USB clock source comes directly from the primary oscillator block with no postscale)
 
 // CONFIG1H
-#pragma config FOSC = HS        // Oscillator Selection bits (HS oscillator (HS))
+#pragma config FOSC = XT_XT        // Oscillator Selection bits (HS oscillator (HS))
 #pragma config FCMEN = OFF      // Fail-Safe Clock Monitor Enable bit (Fail-Safe Clock Monitor disabled)
-#pragma config IESO = OFF       // Internal/External Oscillator Switchover bit (Oscillator Switchover mode disabled)
+#pragma config IESO = OFF       // Oscillator Switchover mode disabled
 
 // CONFIG2L
 #pragma config PWRT = OFF       // Power-up Timer Enable bit (PWRT disabled)
@@ -27,13 +27,13 @@
 
 // CONFIG3H
 #pragma config CCP2MX = ON      // CCP2 MUX bit (CCP2 input/output is multiplexed with RC1)
-#pragma config PBADEN = OFF      // PORTB A/D Enable bit (PORTB<4:0> pins are configured as analog input channels on Reset)
+#pragma config PBADEN = OFF     // PORTB A/D Enable bit (PORTB<4:0> pins are configured as analog input channels on Reset)
 #pragma config LPT1OSC = OFF    // Low-Power Timer 1 Oscillator Enable bit (Timer1 configured for higher power operation)
 #pragma config MCLRE = ON       // MCLR Pin Enable bit (MCLR pin enabled; RE3 input pin disabled)
 
 // CONFIG4L
 #pragma config STVREN = ON      // Stack Full/Underflow Reset Enable bit (Stack full/underflow will cause Reset)
-#pragma config LVP = ON         // Single-Supply ICSP Enable bit (Single-Supply ICSP enabled)
+#pragma config LVP = OFF         // Single-Supply ICSP Enable bit (Single-Supply ICSP enabled)
 #pragma config ICPRT = OFF      // Dedicated In-Circuit Debug/Programming Port (ICPORT) Enable bit (ICPORT disabled)
 #pragma config XINST = OFF      // Extended Instruction Set Enable bit (Instruction set extension and Indexed Addressing mode disabled (Legacy mode))
 
@@ -77,20 +77,20 @@
 
 
 #define testLED RC7
-#define _XTAL_FREQ 16000000
+#define _XTAL_FREQ 4000000
 
 // LCD  port pins
 
-#define RS RB2
-#define RW RB1
-#define EN RB0
+#define RS RD0
+#define RW RD1   
+#define EN RC1
 
-#define switch1 RB3
-#define switch2 RB4
-#define switch3 RB5
-#define switch4 RB6
+#define switch1 RD3
+#define switch2 RD4
+#define switch3 RD5
+#define switch4 RD6
 
-// Commands for LCD display (taken from Act0 by Dr. Alejandro Aragón)
+// Commands for LCD display (taken from Act0 by Dr. Alejandro Arag?n)
 #define ClrScreen 0x01 // LCD clear display screen
 #define ReturnHome 0x02 // LCD return home
 #define DecCursor 0x04 // LCD decrement cursor (shift cursor to left)
@@ -118,17 +118,17 @@
 
 
 // PORT definitions
-#define LCD_Port PORTD // LCD display connected to PORTD
-#define LCD_Tris TRISD // LCD display I/O pin selection
+#define LCD_Port PORTB // LCD display connected to PORTB
+#define LCD_Tris TRISB // LCD display I/O pin selection
 
 void Init_Ports(void)
 {
     TRISCbits.TRISC7 = 0; // The test LED is declared as an output 
     PORTCbits.RC7 = 0; // The test LED is initialized to LOW
     
-    TRISBbits.TRISB0 = 0; // EN declared as output for LCD display
-    TRISBbits.TRISB1 = 0; // RW declared as output for LCD display
-    TRISBbits.TRISB2 = 0; // RS declared as output for LCD display
+    TRISDbits.TRISD0 = 0; // RS declared as output for LCD display
+    TRISDbits.TRISD1 = 0; // RW declared as output for LCD display
+    TRISCbits.TRISC1 = 0; // EN declared as output for LCD display
     
     LCD_Tris = 0; // All LCD pins declared as output    
     LCD_Port = 0; // Initialize display PORT buffer to 0
@@ -137,13 +137,13 @@ void Init_Ports(void)
     TRISAbits.TRISA0 = 1; // First analogue input
     TRISAbits.TRISA1 = 1; // Second analogue input
     
-    TRISBbits.TRISB3 = 1; // Switch 1 input (automatic or manual)
-    TRISBbits.TRISB4 = 1; // Switch 2 input (Temperature)
-    TRISBbits.TRISB5 = 1; // Switch 3 input (Light intensity)
+    TRISDbits.TRISD3 = 1; // Switch 1 input (automatic or manual)
+    TRISDbits.TRISD4 = 1; // Switch 2 input (Temperature)
+    TRISDbits.TRISD5 = 1; // Switch 3 input (Light intensity)
+    TRISDbits.TRISD6 = 1; // Switch 4 input
     
    
 }
-
 
 // The next function writes a command to the LCD display, written by te teacher
 void Lcd_CmdWrite(unsigned char c){
@@ -165,7 +165,7 @@ void Lcd_DataWrite(unsigned char d){
     EN = 0; // Ready, all sent
 }
 
-// The next function uses the previous function to write a full text string to the LCD, written by te teacher
+// The next function uses the previous function to write a full text string to the LCD, written by the teacher
 void Message_LCD(unsigned char *s){
     while(*s){
     Lcd_DataWrite(*s++);
@@ -206,21 +206,42 @@ void Read_Analogue_Input(bool is_A1) {
     Lcd_CmdWrite(FirstLine);
     
     if (is_A1){
-      Message_LCD("Voltage 2: ");   
+      Message_LCD("Light: ");   
     }
     
     else{
-      Message_LCD("Voltage 1: ");  
+      Message_LCD("Temperature: ");  
     }
+    
+    Message_LCD("                ");
     
     GO_DONE = 1;
     while(GO_DONE) {
     }
     ADC_read = ((ADRESH*256.0+ADRESL) * (5/1023.0));
-    sprintf(data,"%.3f",ADC_read);
+    
+    if (is_A1){
+        ADC_read = (ADC_read / 5.0) * 100.0;
+        sprintf(data,"%.1f",ADC_read);
+    }
+    
+    else{
+        ADC_read = ADC_read * 100.0;
+        sprintf(data,"%.1f",ADC_read);
+    }
+    
+    Lcd_CmdWrite(SecondLine);
+    Message_LCD("                ");
     Lcd_CmdWrite(SecondLine);
     Message_LCD(data);
-    Message_LCD(" V");
+    
+    if (is_A1){
+        Message_LCD(" %");
+    }
+    
+    else{
+        Message_LCD(" C");
+    }
 }
 
 void send_error(){
@@ -270,7 +291,7 @@ void Init_sequence(void)
   testLED = 0;
   __delay_ms(200);
   testLED = 1;
-  __delay_ms(200); // wait 200 milliseconds
+  __delay_ms(200);
   testLED = 0;
   __delay_ms(200);
   testLED = 1;
@@ -301,18 +322,18 @@ void main(void) {
         if (state == 0b1000) {       // 1000 automatic mode
             Set_AN0_Channel();
             Read_Analogue_Input(0);
-            __delay_ms(500);
+            __delay_ms(1500);
             Set_AN1_Channel();
             Read_Analogue_Input(1);
-            __delay_ms(500);
+            __delay_ms(1500);
         }
-
+    
         else if (state == 0b1100) {  // 1100 manual mode selected
             send_manual();
             __delay_ms(750);
             Lcd_CmdWrite(ClrScreen);
         }
-
+    
         else if (state == 0b1110) {  // 1110 sensor 1 (manual))
             Set_AN0_Channel();
             Read_Analogue_Input(0);
