@@ -91,7 +91,7 @@
 #define switch4 RD6
 
 // Commands for LCD display (taken from Act0 by Dr. Alejandro Arag?n)
-#define ClrScreen 0x01 // LCD clear display screen
+#define ClrScreen 0x01 // LCD clear display screen //
 #define ReturnHome 0x02 // LCD return home
 #define DecCursor 0x04 // LCD decrement cursor (shift cursor to left)
 #define IncCursor 0x06 // LCD increment cursor (shift cursor to right)
@@ -106,8 +106,8 @@
 #define ShiftCurRight 0x14 // Shift cursor position to right
 #define ShiftDispLeft 0x18 // Shift entire display to the left
 #define ShiftDispRight 0x1C // Shift entire display to the right
-#define FirstLine 0x80 // Cursor beginning of first line
-#define SecondLine 0xC0 // Cursor beginning of second line
+#define FirstLine 0x80 // Cursor beginning of first line  //
+#define SecondLine 0xC0 // Cursor beginning of second line //
 #define TwoLines57Mat 0x38 // Two lines, 5x7 matrix
 
 // Constants (delays)
@@ -132,7 +132,6 @@ void Init_Ports(void)
     
     LCD_Tris = 0; // All LCD pins declared as output    
     LCD_Port = 0; // Initialize display PORT buffer to 0
-    PORTB = 0;    // Initialize PORTB to 0
     
     TRISAbits.TRISA0 = 1; // First analogue input
     TRISAbits.TRISA1 = 1; // Second analogue input
@@ -148,8 +147,8 @@ void Init_Ports(void)
 // The next function writes a command to the LCD display, written by te teacher
 void Lcd_CmdWrite(unsigned char c){
     LCD_Port = c; // Place char ASCII in LCD data bus
-    RS = 0; // To send commands to LCD: RS = 0
-    RW = 0; // This one always to GND
+    RS = 0; // To send commands to LCD: RS = 0 
+    RW = 0; // This one always to GND // 0 is for writing data
     EN = 1; // Send data to LCD now
     __delay_ms(Delay_LCD); // Wait for line to stabilise
     EN = 0; // Ready, all sent
@@ -167,43 +166,49 @@ void Lcd_DataWrite(unsigned char d){
 
 // The next function uses the previous function to write a full text string to the LCD, written by the teacher
 void Message_LCD(unsigned char *s){
-    while(*s){
+    while(*s){   
     Lcd_DataWrite(*s++);
     }
 }
 
 // The next function gest the LCD set up, written by the teacher
 void Init_LCD(){
-    Lcd_CmdWrite(TwoLines57Mat);
-    Lcd_CmdWrite(DispONCurOFF);
+    Lcd_CmdWrite(TwoLines57Mat); //Configure the LCD for two lines
+    Lcd_CmdWrite(DispONCurOFF);  // Turn the display ON and turn the cursor OFF.
     Lcd_CmdWrite(ClrScreen);
     Lcd_CmdWrite(FirstLine);
 }
 
 
 void Init_ADC_Module(){
-    ADFM = 1;
+    ADFM = 1; // A/D result right justified
+    
+              // A0 channel is selected
     CHS3 = 0;
     CHS2 = 0;
     CHS1 = 0;
     CHS0 = 0;  // start with channel A0
-    VCFG1 = 0;
-    VCFG0 = 0;
-    PCFG3 = 1;
+    
+    VCFG1 = 0; // VREF+ 5V
+    VCFG0 = 0; // VREF- 0V
+     
+    PCFG3 = 1; // Only A0-A1 pins configured as analog
     PCFG2 = 1;
-    PCFG1 = 1;
-    PCFG0 = 0;
-    ADCS2 = 0;
+    PCFG1 = 0;
+    PCFG0 = 1;
+    
+    ADCS2 = 0; // configure the ADC clock
     ADCS1 = 1;
     ADCS0 = 0;
-    ADON = 1;
+    
+    ADON = 1; // turn on the ADC convertor
 }
 
 // The enxt function read as an analogue input
 void Read_Analogue_Input(bool is_A1) {
-    char data[8]; // // data can store 6 characters, we don't need more cause we are only displaying one-digit numbers with three decimal places
+    char data[8]; // // data can store 8 characters, we don't need more cause we are only displaying one-digit numbers with three decimal places
     float ADC_read;
-    Lcd_CmdWrite(FirstLine);
+    Lcd_CmdWrite(ClrScreen);
     
     if (is_A1){
       Message_LCD("Light: ");   
@@ -213,9 +218,7 @@ void Read_Analogue_Input(bool is_A1) {
       Message_LCD("Temperature: ");  
     }
     
-    Message_LCD("                ");
-    
-    GO_DONE = 1;
+    GO_DONE = 1; //starts an ADC conversion.
     while(GO_DONE) {
     }
     ADC_read = ((ADRESH*256.0+ADRESL) * (5/1023.0));
@@ -231,8 +234,6 @@ void Read_Analogue_Input(bool is_A1) {
     }
     
     Lcd_CmdWrite(SecondLine);
-    Message_LCD("                ");
-    Lcd_CmdWrite(SecondLine);
     Message_LCD(data);
     
     if (is_A1){
@@ -242,6 +243,8 @@ void Read_Analogue_Input(bool is_A1) {
     else{
         Message_LCD(" C");
     }
+    __delay_ms(4000);
+    Lcd_CmdWrite(ClrScreen);
 }
 
 void send_error(){
@@ -283,28 +286,82 @@ void Set_AN1_Channel(void){
     CHS0 = 1;
 }
 
-
+void INFO_4_User(){
+    Lcd_CmdWrite(ClrScreen);
+    Lcd_CmdWrite(FirstLine);
+    Message_LCD("Welcome user");
+    __delay_ms(4000);
+    Lcd_CmdWrite(ClrScreen);
+    Message_LCD("Automatic Mode");
+    Lcd_CmdWrite(SecondLine);
+    Message_LCD("1 OFF  2 ON");
+    __delay_ms(4000);
+    Lcd_CmdWrite(ClrScreen);
+    Lcd_CmdWrite(FirstLine);
+    Message_LCD("Automatic Mode");
+    Lcd_CmdWrite(SecondLine);
+    Message_LCD("3 ON   4 ON");
+    __delay_ms(4000);
+    Lcd_CmdWrite(ClrScreen);
+    Lcd_CmdWrite(FirstLine);
+    Message_LCD("Manual Mode");
+    Lcd_CmdWrite(SecondLine);
+    Message_LCD("1 OFF  2 OFF");
+    __delay_ms(4000);
+    Lcd_CmdWrite(ClrScreen);
+    Lcd_CmdWrite(FirstLine);
+    Message_LCD("Manual Mode");
+    Lcd_CmdWrite(SecondLine);
+    Message_LCD("3 ON   4 ON");
+    __delay_ms(4000);
+    Lcd_CmdWrite(ClrScreen);
+    Lcd_CmdWrite(FirstLine);
+    Message_LCD("Temperature");
+    Lcd_CmdWrite(SecondLine);
+    Message_LCD("1 OFF  2 OFF");
+    __delay_ms(4000);
+    Lcd_CmdWrite(ClrScreen);
+    Lcd_CmdWrite(FirstLine);
+    Message_LCD("Temperature");
+    Lcd_CmdWrite(SecondLine);
+    Message_LCD("3 OFF  4 ON");
+    __delay_ms(4000);
+    Lcd_CmdWrite(ClrScreen);
+    Lcd_CmdWrite(FirstLine);
+    Message_LCD("Light");
+    Lcd_CmdWrite(SecondLine);
+    Message_LCD("1 OFF  2 OFF");
+    __delay_ms(4000);
+    Lcd_CmdWrite(ClrScreen);
+    Lcd_CmdWrite(FirstLine);
+    Message_LCD("Light");
+    Lcd_CmdWrite(SecondLine);
+    Message_LCD("3 OFF  4 OFF");
+    __delay_ms(5500);
+    Lcd_CmdWrite(ClrScreen);
+}
 void Init_sequence(void)
 {
   testLED = 1;
-  __delay_ms(200);
+  __delay_ms(500);
   testLED = 0;
-  __delay_ms(200);
+  __delay_ms(500);
   testLED = 1;
-  __delay_ms(200);
+  __delay_ms(500);
   testLED = 0;
-  __delay_ms(200);
+  __delay_ms(500);
   testLED = 1;
-  __delay_ms(200);
+  __delay_ms(500);
   testLED = 0;
-  __delay_ms(200);
+  __delay_ms(500);
   testLED = 1;
   Lcd_CmdWrite(ClrScreen);
   Lcd_CmdWrite(FirstLine);
   Message_LCD("All goodie");
   Lcd_CmdWrite(SecondLine);
   Message_LCD("in the hoodie");
-  __delay_ms(1000);
+  __delay_ms(3000);
+  INFO_4_User();
   Lcd_CmdWrite(ClrScreen);
 }
 
@@ -316,39 +373,36 @@ void main(void) {
     Set_AN0_Channel();
     unsigned char state;
     
+    
     while(1) {
     state = read_dip_switch();
     
         if (state == 0b1000) {       // 1000 automatic mode
             Set_AN0_Channel();
             Read_Analogue_Input(0);
-            __delay_ms(1500);
             Set_AN1_Channel();
             Read_Analogue_Input(1);
-            __delay_ms(1500);
         }
     
         else if (state == 0b1100) {  // 1100 manual mode selected
             send_manual();
-            __delay_ms(750);
+            __delay_ms(2000);
             Lcd_CmdWrite(ClrScreen);
         }
     
         else if (state == 0b1110) {  // 1110 sensor 1 (manual))
             Set_AN0_Channel();
             Read_Analogue_Input(0);
-            __delay_ms(500);
         }    
     
         else if (state == 0b1111) {  // 1111 sensor 2 (manual))
             Set_AN1_Channel();
             Read_Analogue_Input(1);
-            __delay_ms(500);
         }   
         
         else{    
             send_error();
-            __delay_ms(750);
+            __delay_ms(2000);
             Lcd_CmdWrite(ClrScreen);
         }
     }
